@@ -20,43 +20,43 @@ const isAdmin = (req, res, next) => {
 };
 
 // GET all products
-router.get('/', async (req, res) => {
+router.get('/', (req, res) => {
     try {
-        const result = await db.query('SELECT * FROM products');
-        res.json(result.rows);
+        const products = db.prepare('SELECT * FROM products').all();
+        res.json(products);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 // ADD product
-router.post('/', isAdmin, async (req, res) => {
+router.post('/', isAdmin, (req, res) => {
     const { name, image_url, description, price, stock, is_vegetarian, calories, protein, sugar, warnings } = req.body;
 
     try {
-        const result = await db.query(`
+        const stmt = db.prepare(`
       INSERT INTO products (name, image_url, description, price, stock, is_vegetarian, calories, protein, sugar, warnings)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-            [name, image_url, description, price, stock, is_vegetarian, calories, protein, sugar, warnings]
-        );
-        res.status(201).json({ id: result.rows[0].id, ...req.body });
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+        const info = stmt.run(name, image_url, description, price, stock, is_vegetarian, calories, protein, sugar, warnings);
+        res.status(201).json({ id: info.lastInsertRowid, ...req.body });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 // UPDATE product
-router.put('/:id', isAdmin, async (req, res) => {
+router.put('/:id', isAdmin, (req, res) => {
     const { id } = req.params;
     const { name, image_url, description, price, stock, is_vegetarian, calories, protein, sugar, warnings } = req.body;
 
     try {
-        const result = await db.query(`
-      UPDATE products SET name=$1, image_url=$2, description=$3, price=$4, stock=$5, is_vegetarian=$6, calories=$7, protein=$8, sugar=$9, warnings=$10
-      WHERE id = $11`,
-            [name, image_url, description, price, stock, is_vegetarian, calories, protein, sugar, warnings, id]
-        );
-        if (result.rowCount === 0) return res.status(404).json({ error: 'Product not found' });
+        const stmt = db.prepare(`
+      UPDATE products SET name=?, image_url=?, description=?, price=?, stock=?, is_vegetarian=?, calories=?, protein=?, sugar=?, warnings=?
+      WHERE id = ?
+    `);
+        const info = stmt.run(name, image_url, description, price, stock, is_vegetarian, calories, protein, sugar, warnings, id);
+        if (info.changes === 0) return res.status(404).json({ error: 'Product not found' });
         res.json({ message: 'Product updated' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -64,11 +64,12 @@ router.put('/:id', isAdmin, async (req, res) => {
 });
 
 // DELETE product
-router.delete('/:id', isAdmin, async (req, res) => {
+router.delete('/:id', isAdmin, (req, res) => {
     const { id } = req.params;
     try {
-        const result = await db.query('DELETE FROM products WHERE id = $1', [id]);
-        if (result.rowCount === 0) return res.status(404).json({ error: 'Product not found' });
+        const stmt = db.prepare('DELETE FROM products WHERE id = ?');
+        const info = stmt.run(id);
+        if (info.changes === 0) return res.status(404).json({ error: 'Product not found' });
         res.json({ message: 'Product deleted' });
     } catch (err) {
         res.status(500).json({ error: err.message });

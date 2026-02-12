@@ -75,20 +75,23 @@ const products = [
     }
 ];
 
-const seed = async () => {
-    try {
-        await db.query('DELETE FROM products');
+const seed = () => {
+    const insert = db.prepare(`
+        INSERT INTO products (name, image_url, description, price, stock, is_vegetarian, calories, protein, sugar, warnings)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
 
-        for (const item of products) {
-            await db.query(`
-                INSERT INTO products (name, image_url, description, price, stock, is_vegetarian, calories, protein, sugar, warnings)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            `, [item.name, item.image_url, item.description, item.price, item.stock, item.is_vegetarian, item.calories, item.protein, item.sugar, item.warnings]);
+    const clear = db.prepare('DELETE FROM products');
+    clear.run();
+
+    const transaction = db.transaction((items) => {
+        for (const item of items) {
+            insert.run(item.name, item.image_url, item.description, item.price, item.stock, item.is_vegetarian, item.calories, item.protein, item.sugar, item.warnings);
         }
-        console.log('Seeded products successfully');
-    } catch (err) {
-        console.error('Seeding failed:', err);
-    }
+    });
+
+    transaction(products);
+    console.log('Seeded products successfully');
 };
 
 seed();

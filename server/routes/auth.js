@@ -7,7 +7,7 @@ const db = require('../db');
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', (req, res) => {
     const { username, password, diet_preference, health_conditions } = req.body;
 
     if (!username || !password) {
@@ -16,15 +16,15 @@ router.post('/register', async (req, res) => {
 
     try {
         const hashedPassword = bcrypt.hashSync(password, 10);
-        const result = await db.query(
-            `INSERT INTO users (username, password, diet_preference, health_conditions)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-            [username, hashedPassword, diet_preference, health_conditions]
-        );
+        const stmt = db.prepare(`
+      INSERT INTO users (username, password, diet_preference, health_conditions)
+      VALUES (?, ?, ?, ?)
+    `);
+        const info = stmt.run(username, hashedPassword, diet_preference, health_conditions);
 
-        res.status(201).json({ id: result.rows[0].id, username, role: 'user' });
+        res.status(201).json({ id: info.lastInsertRowid, username, role: 'user' });
     } catch (err) {
-        if (err.code === '23505') { // Unique violation code for Postgres
+        if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
             return res.status(400).json({ error: 'Username already exists' });
         }
         res.status(500).json({ error: err.message });
@@ -32,13 +32,11 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', (req, res) => {
     const { username, password } = req.body;
 
     try {
-        const result = await db.query('SELECT * FROM users WHERE username = $1', [username]);
-        const user = result.rows[0];
-
+        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
         if (!user) {
             return res.status(400).json({ error: 'Invalid credentials' });
         }

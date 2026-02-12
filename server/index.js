@@ -18,12 +18,6 @@ app.get('/', (req, res) => {
     res.send('Health Conscious Food App API');
 });
 
-// For Vercel, we need to export the app
-// Only listen if not in production (or if running locally)
-if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-}
-
-module.exports = app;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
