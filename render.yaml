@@ -16,7 +16,7 @@ services:
         generateValue: true
 
   # Frontend Service
-  - type: static
+  - type: site
     name: food-app-client
     env: static
     region: singapore
