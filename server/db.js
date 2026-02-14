@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
+const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, 'database.sqlite');
 const db = new Database(dbPath);
 
 // Initialize tables
