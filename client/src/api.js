@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+const getBaseUrl = () => {
+    let url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    if (!url.startsWith('http')) {
+        // If it's just a hostname (from Render), prepend https and append /api
+        url = `https://${url}/api`;
+    }
+    return url;
+};
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+    baseURL: getBaseUrl(),
 });
 
 api.interceptors.request.use(
